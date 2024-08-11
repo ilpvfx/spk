@@ -79,6 +79,15 @@ pub enum OpenRepositoryError {
         source: Box<dyn miette::Diagnostic + Send + Sync>,
     },
 
+    #[error("Missing host in transport address")]
+    MissingHost {
+        address: String,
+    },
+    #[error("Failed to parse transport address")]
+    FailedToParseTransportAddress {
+        #[from]
+        source: url::ParseError,
+    },
     #[error("Invalid repository address")]
     InvalidTransportAddress {
         #[source_code]

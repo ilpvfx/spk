@@ -12,6 +12,8 @@ use crate::proto::tag_service_client::TagServiceClient;
 use crate::storage::{OpenRepositoryError, OpenRepositoryResult, TagNamespace, TagNamespaceBuf};
 use crate::{proto, storage, Result};
 
+const DEFAULT_TRANSPORT_SCHEME: &str = "http";
+
 /// Configures an rpc repository connection
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct Config {
@@ -104,9 +106,27 @@ impl RpcRepository {
         Self::from_url(&address).await
     }
 
+    /// Replace the scheme of a URL with a new scheme, if it is not http or https
+    fn replace_url_scheme(input: &url::Url, new_scheme: &str) -> OpenRepositoryResult<url::Url> {
+        match input.scheme() {
+            "http" | "https" => {
+                Ok(input.to_owned())
+            },
+            _ => {
+                Ok(url::Url::parse(
+                    &format!("{new_scheme}://{host}{port}", 
+                    host = input.host_str().ok_or(OpenRepositoryError::MissingHost{address: input.to_string()})?, 
+                    port = input.port().map(|port| format!(":{}", port)).unwrap_or_default())
+                )?)
+            }
+        }
+    }
+
     /// Create a new rpc repository client for the given configuration
     pub async fn new(config: Config) -> OpenRepositoryResult<Self> {
-        let mut endpoint = tonic::transport::Endpoint::from_shared(config.address.to_string())
+        let mut endpoint = tonic::transport::Endpoint::from_shared(
+            Self::replace_url_scheme(&config.address, DEFAULT_TRANSPORT_SCHEME)?.to_string()
+        )
             .map_err(|source| OpenRepositoryError::InvalidTransportAddress {
                 address: config.address.to_string(),
                 source,
