@@ -40,7 +40,7 @@ jobs:
           workflow: rpm.yml
           workflow_conclusion: success
           name: Binary RPM
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: Binary RPM
       - run: mkdir -p dist/rpm/RPMS/x86_64/
